@@ -3,7 +3,7 @@
 #include "math/FloatVec3.h"
 
 struct TrianglePrimitive {
-	rt::floatVec3 location;
+	rt::FloatVec3 location;
 	rt::FloatVec3 color;
 	rt::FloatVec3 normal;
 	rt::FloatVec3 reflectivity;
@@ -12,7 +12,7 @@ struct TrianglePrimitive {
 class Object {
 public:
 	void addPrimitive(const TrianglePrimitive& primitive);
-	void usePrimitive(int index);
+	TrianglePrimitive usePrimitive(int index);
 private:
 	std::vector<TrianglePrimitive> triangles;
 };

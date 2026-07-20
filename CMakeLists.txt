@@ -14,8 +14,8 @@ project ("WhittedStyleRayTracingDemo")
 # 将源代码添加到此项目的可执行文件。
 add_executable (WhittedStyleRayTracingDemo "src/WhittedStyleRayTracingDemo.cpp" 
 				"src/WhittedStyleRayTracingDemo.h" 
-				"src/object/object.h"	"src/object/object.cpp"
-				"src/math/FloatVec3.h"	"src/math/FloatVec3.cpp")
+				"src/math/FloatVec3.h"	"src/math/FloatVec3.cpp" 
+				"src/object/Sphere.h" "src/object/Sphere.cpp")
 
 target_include_directories(WhittedStyleRayTracingDemo PRIVATE src)
 
