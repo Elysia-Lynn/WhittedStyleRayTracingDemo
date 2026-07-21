@@ -3,6 +3,7 @@
 
 class Ray {
 public:
+	//´ÓstartÖ¸Ïògoal
 	Ray(rt::FloatVec3 start,rt::FloatVec3 goal) {
 		point=start;
 		float x = goal.getX() - start.getX();

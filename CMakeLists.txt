@@ -15,7 +15,8 @@ project ("WhittedStyleRayTracingDemo")
 add_executable (WhittedStyleRayTracingDemo "src/WhittedStyleRayTracingDemo.cpp" 
 				"src/WhittedStyleRayTracingDemo.h" 
 				"src/math/FloatVec3.h"	"src/math/FloatVec3.cpp" 
-				"src/object/Sphere.h" "src/object/Sphere.cpp")
+				"src/object/Sphere.h" "src/object/Sphere.cpp"
+				"src/object/Ray.h" "src/object/Ray.cpp")
 
 target_include_directories(WhittedStyleRayTracingDemo PRIVATE src)
 
