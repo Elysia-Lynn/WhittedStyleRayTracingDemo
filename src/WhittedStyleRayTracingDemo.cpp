@@ -12,7 +12,7 @@ float intersection(Sphere globe, Ray ray);
 Ray reflection(Sphere globe, rt::FloatVec3 point);
 
 const rt::FloatVec3 cameraPos = rt::FloatVec3(0.0f, 0.0f, 0.0f);
-const rt::FloatVec3 lightPos = rt::FloatVec3(0.0f, 5.0f, -4.5f);
+const rt::FloatVec3 lightPos = rt::FloatVec3(0.0f, 1.0f, -2.5f);
 
 int main()
 {
@@ -43,8 +43,8 @@ int main()
 	std::ofstream out("image.ppm");
 	out << "P3\n" << width << " " << height << "\n255\n";
 
-	for (int i = 0; i < width; i++) {
-		for (int j = 0; j < height; j++) {
+	for (int j = height-1; j >= 0; j--) {
+		for (int i = 0; i < width; i++) {
 			float pixelCentreX = (i - width / 2.0 + 0.5) * pixelLength;
 			float pixelCentreY = (j - height / 2.0 + 0.5) * pixelLength;
 			rt::FloatVec3 pixelCentrePos = rt::FloatVec3(pixelCentreX,pixelCentreY,imagePlaneZ);
@@ -80,63 +80,65 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth,rt::F
 		return rt::FloatVec3(0.0f,0.0f,0.0f);
 	}
 	else {
-		std::vector<float> ts;
-		for (int index = 0; index < globes.size(); index++) {
-			Sphere globe = globes[index];
-			float t = intersection(globe, ray);
-
-			if (std::abs(t - 0.0f) > EPSILON) {
-				ts.push_back(t);
-			}
-		}
-
-		if (ts.size() == 0) {
-				return rt::FloatVec3(0.0f, 0.0f, 0.0f);
-		}
-			else {
-				auto min = std::min_element(ts.begin(), ts.end());
-				float t = *min;
-				int index = std::distance(ts.begin(), min);
-				Sphere globe = globes[index];
-				rt::FloatVec3 point = ray.pointAtParameter(t);
-				depth++;
-				//这个东西写在这颇为尴尬啊，后面有的地方用了它有的地方直接用point重算了一遍，anyway
-				Ray lightRay = Ray(point, lightPos);
-				float distance = point.distance(lightPos);
-				Ray reflectionLight = reflection(globe, point);
-				float cosine = lightRay.getDirection().cosine(reflectionLight.getDirection());
-				rt::FloatVec3 specular = calculateColor(globes, reflectionLight, depth, rgb).multiply(globe.getReflectivity().getY()).multiply(pow(cosine, 200)).multiply(1.0f + distance);
-
-				bool lightUp = true;
-				for (int i = 0; i < globes.size(); i++) {
-					Sphere thisGlobe = globes[i];
-					if (intersection(thisGlobe, lightRay)) {
-						lightUp = false;
-						break;
-					}
-				}
-				//如果有问题排查这里方向对不对，以及是不是有负数
-				if (lightUp) {
-					rt::FloatVec3 diffuse = globe.getColor().multiply(globe.getNormal(point).cosine(lightRay.getDirection())).multiply(1.0f + distance).multiply(globe.getReflectivity().getX());
-					if (std::abs(globe.getRefraction() - 1.0f) <= EPSILON) {
-						return diffuse + specular;
-					}
-					else {
-						//rt::FloatVec3 refraction=
-						return diffuse + specular;
-					}
+		int index =-1;
+		float t=1e9f;
+		for (int i = 0; i < globes.size(); i++) {
+			Sphere globe = globes[i];
+			float t1 = intersection(globe, ray);
+			if (t1 < t) {
+				if (t1 < EPSILON) {
+					;
 				}
 				else {
-					if (std::abs(globe.getRefraction() - 1.0f) <= EPSILON) {
-						return specular;
-					}
-					else {
-						//rt::FloatVec3 refraction=
-						return specular;
-					}
+					t = t1;
+					index = i;
 				}
 			}
-		
+		}
+		if (index == -1) {
+			return rt::FloatVec3(0.0f, 0.0f, 0.0f);
+		}
+		else {
+			Sphere globe = globes[index];
+			rt::FloatVec3 point = ray.pointAtParameter(t);
+			depth++;
+			//这个东西写在这颇为尴尬啊，后面有的地方用了它有的地方直接用point重算了一遍，anyway
+			Ray lightRay = Ray(point, lightPos);
+			float distance = point.distance(lightPos);
+			Ray reflectionLight = reflection(globe, point);
+			float cosine = lightRay.getDirection().cosine(reflectionLight.getDirection());
+			rt::FloatVec3 specular = calculateColor(globes, reflectionLight, depth, rgb).multiply(globe.getReflectivity().getY()).multiply(pow(cosine, 200)).multiply(1.0f + distance);
+
+			bool lightUp = true;
+			for (int i = 0; i < globes.size(); i++) {
+				Sphere thisGlobe = globes[i];
+				if (intersection(thisGlobe, lightRay)) {
+					lightUp = false;
+					break;
+				}
+			}
+			//如果有问题排查这里方向对不对，以及是不是有负数
+			if (lightUp) {
+				rt::FloatVec3 diffuse = globe.getColor().multiply(globe.getNormal(point).cosine(lightRay.getDirection())).multiply(1.0f + distance).multiply(globe.getReflectivity().getX());
+				if (std::abs(globe.getRefraction() - 1.0f) <= EPSILON) {
+					return diffuse + specular;
+				}
+				else {
+					//rt::FloatVec3 refraction=
+					return diffuse + specular;
+				}
+			}
+			else {
+				if (std::abs(globe.getRefraction() - 1.0f) <= EPSILON) {
+					return specular;
+				}
+				else {
+					//rt::FloatVec3 refraction=
+					return specular;
+				}
+			}
+
+		}
 	}
 }
 
