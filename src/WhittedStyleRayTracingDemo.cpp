@@ -4,7 +4,8 @@
 #include "WhittedStyleRayTracingDemo.h"
 
 #define EPSILON 1e-4f
-#define LIMIT 2
+#define LIMIT 1
+#define DEBUG
 
 int regulate(float);
 rt::FloatVec3 calculateColor(std::vector<Sphere>, Ray,int,rt::FloatVec3&);
@@ -17,6 +18,8 @@ const rt::FloatVec3 lightPos = rt::FloatVec3(0.0f, 1.0f, -2.5f);
 int main()
 {
 	std::vector<Sphere>globes;
+#ifndef DEBUG
+
 	globes.emplace_back(Sphere(rt::FloatVec3(0.0f, -100.5f, -4.5f),
 		rt::FloatVec3(0.5f, 0.5f, 0.5f),
 		99.0f, rt::FloatVec3(1.0f, 0.0f, 0.0f),
@@ -29,6 +32,8 @@ int main()
 		rt::FloatVec3(1.0f, 1.0f, 1.0f),
 		0.3f, rt::FloatVec3(0.0f, 0.1f, 0.9f),
 		1.5f));
+
+#endif
 	globes.emplace_back(Sphere(rt::FloatVec3(1.0f, 0.0f, -4.5f),
 		rt::FloatVec3(0.8f, 0.1f, 0.1f),
 		0.5f, rt::FloatVec3(0.8f, 0.2f, 0.0f),
@@ -53,7 +58,8 @@ int main()
 			rt::FloatVec3 rgb = rt::FloatVec3(0.0f, 0.0f, 0.0f);
 			//在这里我们使用了深度来防无限循环，也可以用能量来衡量，后面试试（注意到能量不能单独用，比方说两个镜面对弹，那真是完了）
 			int depth = 0;
-			rgb=calculateColor(globes, ray,depth,rgb);
+
+			rgb = calculateColor(globes, ray, depth, rgb);
 			
 			int r = regulate(rgb.getX());
 			int g = regulate(rgb.getY());
@@ -99,8 +105,13 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth,rt::F
 			return rt::FloatVec3(0.0f, 0.0f, 0.0f);
 		}
 		else {
+#ifdef DEBUG
+			return rt::FloatVec3(1.0f, 1.0f, 1.0f);
+#endif // DEBUG
+
 			Sphere globe = globes[index];
 			rt::FloatVec3 point = ray.pointAtParameter(t);
+
 			depth++;
 			//这个东西写在这颇为尴尬啊，后面有的地方用了它有的地方直接用point重算了一遍，anyway
 			Ray lightRay = Ray(point, lightPos);
