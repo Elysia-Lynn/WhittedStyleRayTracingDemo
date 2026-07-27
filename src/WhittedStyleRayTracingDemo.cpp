@@ -4,11 +4,13 @@
 #include "WhittedStyleRayTracingDemo.h"
 
 #define EPSILON 1e-4f
-#define LIMIT 3
+#define LIMIT 1
 //#define DEBUG
+//#define DEBUG1
+//#define DEBUG2
 
 int regulate(float);
-rt::FloatVec3 calculateColor(std::vector<Sphere>, Ray,int,rt::FloatVec3&);
+rt::FloatVec3 calculateColor(std::vector<Sphere>, Ray,int);
 float intersection(Sphere globe, Ray ray);
 Ray reflection(Sphere globe, rt::FloatVec3 point);
 
@@ -32,6 +34,12 @@ int main()
 		rt::FloatVec3(1.0f, 1.0f, 1.0f),
 		0.3f, rt::FloatVec3(0.0f, 0.1f, 0.9f),
 		1.5f));
+#endif
+#ifndef DEBUG1
+	globes.emplace_back(Sphere(rt::FloatVec3(0.0f, 0.0f, -100.0f),
+		rt::FloatVec3(0.005f, 0.05f, 1.0f),
+		60.0f, rt::FloatVec3(1.0f, 0.0f, 0.0f),
+		1.0f));
 
 #endif
 	globes.emplace_back(Sphere(rt::FloatVec3(1.0f, 0.0f, -4.5f),
@@ -59,11 +67,11 @@ int main()
 			//在这里我们使用了深度来防无限循环，也可以用能量来衡量，后面试试（注意到能量不能单独用，比方说两个镜面对弹，那真是完了）
 			int depth = 0;
 
-			rgb = calculateColor(globes, ray, depth, rgb);
-			
+			rgb = calculateColor(globes, ray, depth);
 			int r = regulate(rgb.getX());
 			int g = regulate(rgb.getY());
 			int b = regulate(rgb.getZ());
+			//std::cout << rgb.getX() <<" "<< rgb.getY() <<" "<< rgb.getZ() << "\n";
 			out << r << " " << g << " " << b<<"\n";
 		}
 	}
@@ -81,7 +89,7 @@ int regulate(float a) {
 }
 
 //这个函数将返回最终的颜色值，主要功能是计算现在这条光线能与哪个globe相交，并得出交点
-rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth,rt::FloatVec3& rgb) {
+rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth) {
 	if (depth >= LIMIT) {
 		return rt::FloatVec3(0.0f,0.0f,0.0f);
 	}
@@ -105,7 +113,7 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth,rt::F
 			return rt::FloatVec3(0.0f, 0.0f, 0.0f);
 		}
 		else {
-#ifdef DEBUG
+#ifdef DEBUG1
 			return rt::FloatVec3(1.0f, 1.0f, 1.0f);
 #endif // DEBUG
 
@@ -113,12 +121,17 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth,rt::F
 			rt::FloatVec3 point = ray.pointAtParameter(t);
 
 			depth++;
+
 			//这个东西写在这颇为尴尬啊，后面有的地方用了它有的地方直接用point重算了一遍，anyway
 			Ray lightRay = Ray(point, lightPos);
+
 			float distance = point.distance(lightPos);
 			Ray reflectionLight = reflection(globe, point);
 			float cosine = lightRay.getDirection().cosine(reflectionLight.getDirection());
-			rt::FloatVec3 specular = calculateColor(globes, reflectionLight, depth, rgb).multiply(globe.getReflectivity().getY()).multiply(pow(cosine, 200)).multiply(1.0f + distance);
+			rt::FloatVec3 specular = calculateColor(globes, reflectionLight, depth).multiply(globe.getReflectivity().getY()).multiply(pow(cosine, 200)).multiply(1.0f + distance);
+#ifdef DEBUG2
+			specular = rt::FloatVec3(0.0f, 0.0f, 0.0f);
+#endif // DEBUG2
 
 			bool lightUp = true;
 			for (int i = 0; i < globes.size(); i++) {
@@ -128,7 +141,7 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth,rt::F
 					break;
 				}
 			}
-			//如果有问题排查这里方向对不对，以及是不是有负数
+			
 			if (lightUp) {
 				rt::FloatVec3 diffuse = globe.getColor().multiply(globe.getNormal(point).cosine(lightRay.getDirection())).multiply(1.0f + distance).multiply(globe.getReflectivity().getX());
 				if (std::abs(globe.getRefraction() - 1.0f) <= EPSILON) {
@@ -165,7 +178,7 @@ float intersection(Sphere globe,Ray ray) {
 			float t1 = (-b + std::sqrt(delta)) / (2 * a);
 			float t2 = (-b - std::sqrt(delta)) / (2 * a);
 			//不可能=0,不单独写了
-			if (t1 < 0) {
+			if (t1 < EPSILON) {
 				return 0;
 			}
 			else if (t2 < 0) {
