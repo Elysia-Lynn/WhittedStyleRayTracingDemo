@@ -4,8 +4,8 @@
 #include "WhittedStyleRayTracingDemo.h"
 
 #define EPSILON 1e-4f
-#define LIMIT 1
-#define DEBUG
+#define LIMIT 3
+//#define DEBUG
 
 int regulate(float);
 rt::FloatVec3 calculateColor(std::vector<Sphere>, Ray,int,rt::FloatVec3&);
@@ -53,7 +53,7 @@ int main()
 			float pixelCentreX = (i - width / 2.0 + 0.5) * pixelLength;
 			float pixelCentreY = (j - height / 2.0 + 0.5) * pixelLength;
 			rt::FloatVec3 pixelCentrePos = rt::FloatVec3(pixelCentreX,pixelCentreY,imagePlaneZ);
-			Ray ray = Ray(pixelCentrePos, cameraPos);
+			Ray ray = Ray(cameraPos,pixelCentrePos);
 
 			rt::FloatVec3 rgb = rt::FloatVec3(0.0f, 0.0f, 0.0f);
 			//在这里我们使用了深度来防无限循环，也可以用能量来衡量，后面试试（注意到能量不能单独用，比方说两个镜面对弹，那真是完了）
@@ -92,7 +92,7 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth,rt::F
 			Sphere globe = globes[i];
 			float t1 = intersection(globe, ray);
 			if (t1 < t) {
-				if (t1 < EPSILON) {
+				if (t1 <=0 ) {
 					;
 				}
 				else {
@@ -178,7 +178,12 @@ float intersection(Sphere globe,Ray ray) {
 				return 0;
 		}
 		else {
-			return -b / (2 * a);
+			if (b >= 0) {
+				return 0;
+			}
+			else {
+				return -b / (2 * a);
+			}
 		}
 }
 
