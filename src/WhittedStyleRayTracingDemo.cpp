@@ -4,11 +4,11 @@
 #include "WhittedStyleRayTracingDemo.h"
 
 #define EPSILON 1e-4f
-#define LIMIT 5
+#define LIMIT 3
 //#define DEBUG
 //#define DEBUG1
 //#define DEBUG2
-//#define DEBUG3		//调试折射函数中
+#define DEBUG3		//调试折射函数中
 //#define DEBUG4		//继续调试折射函数
 
 int regulate(float);
@@ -19,10 +19,13 @@ Ray refract(Sphere globe, rt::FloatVec3 point, Ray ray);
 
 const rt::FloatVec3 cameraPos = rt::FloatVec3(0.0f, 0.0f, 0.0f);
 const rt::FloatVec3 lightPos = rt::FloatVec3(0.0f, 1.0f, -2.5f);
+const float lightIntensity = 50.0f;
 
 #ifdef DEBUG3
 int num = 1;
 #endif // DEBUG3
+
+std::ofstream words("words.txt");
 
 int main()
 {
@@ -38,16 +41,9 @@ int main()
 		0.5f, rt::FloatVec3(0.1f, 0.9f, 0.0f),
 		1.0f));
 	globes.emplace_back(Sphere(rt::FloatVec3(0.0f, 0.0f, -4.5f),
-		rt::FloatVec3(1.0f, 1.0f, 1.0f),
-		0.3f, rt::FloatVec3(0.0f, 0.1f, 0.9f),
+		rt::FloatVec3(0.5f, 0.25f, 0.5f),
+		0.4f, rt::FloatVec3(0.05f, 0.15f, 0.8f),
 		1.5f));
-#endif
-#ifndef DEBUG1
-	globes.emplace_back(Sphere(rt::FloatVec3(0.0f, 0.0f, -100.0f),
-		rt::FloatVec3(0.005f, 0.05f, 1.0f),
-		60.0f, rt::FloatVec3(1.0f, 0.0f, 0.0f),
-		1.0f));
-
 #endif
 	globes.emplace_back(Sphere(rt::FloatVec3(1.0f, 0.0f, -4.5f),
 		rt::FloatVec3(0.8f, 0.1f, 0.1f),
@@ -102,7 +98,7 @@ int regulate(float a) {
 //这个函数将返回最终的颜色值，主要功能是计算现在这条光线能与哪个globe相交，并得出交点
 rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth) {
 	if (depth >= LIMIT) {
-		return rt::FloatVec3(0.0f,0.0f,0.0f);
+		return rt::FloatVec3(0.0f, 0.0f, 0.0f);
 	}
 	else {
 		int index =-1;
@@ -121,7 +117,8 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth) {
 			}
 		}
 		if (index == -1) {
-			return rt::FloatVec3(0.0f, 0.0f, 0.0f);
+			//这就是我的天空了
+			return rt::FloatVec3(0.53f, 0.85f, 0.90f);
 		}
 		else {
 #ifdef DEBUG1
@@ -139,8 +136,8 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth) {
 			Ray refractionLight = refract(globe, point, ray);
 			float cosine = lightRay.getDirection().cosine(reflectionLight.getDirection());
 			float refractCosine = lightRay.getDirection().cosine(refractionLight.getDirection());
-			rt::FloatVec3 specular = calculateColor(globes, reflectionLight, depth).multiply(globe.getReflectivity().getY()).multiply(pow(cosine, 200)).multiply(1.0f + distance);
-			rt::FloatVec3 refraction = calculateColor(globes, refractionLight, depth).multiply(globe.getReflectivity().getZ()).multiply(pow(refractCosine, 200)).multiply(1.0f + distance);
+			rt::FloatVec3 specular = calculateColor(globes,reflectionLight,depth).multiply(globe.getReflectivity().getY()).multiply(pow(cosine, 200)).multiply(1 / (1.0f + distance)).multiply(lightIntensity);
+			rt::FloatVec3 refraction = calculateColor(globes, refractionLight, depth).multiply(globe.getReflectivity().getZ());
 #ifdef DEBUG2
 			specular = rt::FloatVec3(0.0f, 0.0f, 0.0f);
 #endif // DEBUG2
@@ -155,27 +152,26 @@ rt::FloatVec3 calculateColor(std::vector<Sphere> globes, Ray ray,int depth) {
 			}
 			
 			if (lightUp) {
-				rt::FloatVec3 diffuse = globe.getColor().multiply(globe.getNormal(point).cosine(lightRay.getDirection())).multiply(1.0f + distance).multiply(globe.getReflectivity().getX());
-				if (std::abs(globe.getRefraction() - 1.0f) <= EPSILON) {
-					return diffuse + specular;
+				rt::FloatVec3 diffuse = globe.getColor().multiply(globe.getNormal(point).cosine(lightRay.getDirection())).multiply(1/(1.0f + distance)).multiply(globe.getReflectivity().getX()).multiply(lightIntensity);
+				if (globe.getRefraction() - 1.0f > 0) {
+#ifdef DEBUG3
+					words << "1\n";
+#endif // DEBUG3
+					return diffuse + specular+refraction;
 				}
 				else {
-					//refraction
-#ifdef DEBUG4
-					return rt::FloatVec3(0.5f,0.5f,1.0f);
-#endif
-					return diffuse + specular + refraction;
+					return diffuse + specular;
 				}
 			}
 			else {
-				if (std::abs(globe.getRefraction() - 1.0f) <= EPSILON) {
-					return specular;
+				if ((globe.getRefraction() - 1.0f) > 0) {
+#ifdef DEBUG3
+					words << "1\n";
+#endif
+					return specular+refraction;
 				}
 				else {
-#ifdef DEBUG4
-					return rt::FloatVec3(0.5f, 0.5f, 1.0f);
-#endif
-					return specular + refraction;
+					return specular;
 				}
 			}
 
@@ -208,7 +204,7 @@ float intersection(Sphere globe,Ray ray) {
 				return 0;
 		}
 		else {
-			if (b >= 0) {
+			if (b >= EPSILON) {
 				return 0;
 			}
 			else {
@@ -246,21 +242,29 @@ Ray reflection(Sphere globe, rt::FloatVec3 point,Ray ray) {
 }
 
 //这个函数返回接下来折射的光线（注意区分球内部球外部）
+//因为物体都是球体所以这里没有讨论全反射的情况
 Ray refract(Sphere globe, rt::FloatVec3 point,Ray ray) {
 	rt::FloatVec3 normal = globe.getNormal(point);
 	float globeRefraction = globe.getRefraction();
 	float rayRefraction = ray.getRefractionIndex();
-	float cos1 = normal.cosine(ray.getDirection().multiply(-1.0f));
+	float cos1 = std::abs(normal.cosine(ray.getDirection().multiply(-1.0f)));
 	float sin1 = std::sqrt(1.0f - pow(cos1, 2));
 	float tan1 = sin1 / cos1;
 	float sin2 = 0.0f;
 	float refraction = 1.0f;
-	if (rayRefraction - 1.0f < EPSILON) {		//光从球外来，向球内折射
+	if( (rayRefraction - 1.0f) < EPSILON) {		//光从球外来，向球内折射
 		sin2 = sin1 / globeRefraction;
 		refraction = globeRefraction;
+#ifdef DEBUG3
+		words << "refract in\n";
+#endif // DEBUG3
 	}
 	else {
 		sin2 = sin1 * globeRefraction;
+		normal = rt::FloatVec3(0.0f,0.0f,0.0f) - normal;
+#ifdef DEBUG3
+		words << "refract out\n";		
+#endif // DEBUG3
 	}
 	float cos2 = std::sqrt(1.0f - pow(sin2, 2));
 	float tan2 = sin2 / cos2;
@@ -269,7 +273,7 @@ Ray refract(Sphere globe, rt::FloatVec3 point,Ray ray) {
 	rt::FloatVec3 vec= (BA + ray.getDirection()).normalize();
 	rt::FloatVec3 nextPoint = vec + point;
 #ifdef DEBUG3
-	std::cout << num<<"\n";
+	words << num<<"\n";
 #endif // DEBUG3
 	return Ray(point, nextPoint, refraction);
 }

@@ -4,7 +4,7 @@
 class Ray {
 public:
 	//¥”start÷∏œÚgoal
-	Ray(rt::FloatVec3 start,rt::FloatVec3 goal,float reflectionIndex) {
+	Ray(rt::FloatVec3 start,rt::FloatVec3 goal,float refractionIndex) {
 		point=start;
 		float x = goal.getX() - start.getX();
 		float y = goal.getY() - start.getY();
